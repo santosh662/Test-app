@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow — DevOps Task Manager</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-bottom: 1px solid #334155;
+  padding: 0 2rem; height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { font-size: 1.4rem; font-weight: 700; color: #38bdf8; letter-spacing: -0.5px; }
+.logo span { color: #f1f5f9; }
+.header-links { display: flex; gap: 0.75rem; }
+.hlink {
+  font-size: 0.75rem; color: #64748b; text-decoration: none;
+  background: #1e293b; border: 1px solid #334155;
+  padding: 0.3rem 0.75rem; border-radius: 6px; transition: all 0.2s;
+}
+.hlink:hover { color: #38bdf8; border-color: #38bdf8; }
+
+.stats-bar {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1rem; padding: 1.5rem 2rem;
+  background: #1e293b; border-bottom: 1px solid #334155;
+}
+.stat-card {
+  background: #0f172a; border: 1px solid #334155; border-radius: 12px;
+  padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem;
+}
+.stat-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; flex-shrink: 0;
+}
+.ic-blue   { background: rgba(56,189,248,0.15); color: #38bdf8; }
+.ic-yellow { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+.ic-green  { background: rgba(52,211,153,0.15);  color: #34d399; }
+.ic-red    { background: rgba(248,113,113,0.15); color: #f87171; }
+.stat-value { font-size: 1.8rem; font-weight: 700; line-height: 1; }
+.stat-label { font-size: 0.75rem; color: #64748b; margin-top: 3px; }
+
+.main { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 160px); }
+
+.add-panel {
+  background: #1e293b; border-right: 1px solid #334155; padding: 1.5rem;
+}
+.panel-title {
+  font-size: 0.8rem; font-weight: 600; color: #94a3b8;
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1.25rem;
+}
+.form-group { margin-bottom: 1rem; }
+label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.4rem; font-weight: 500; }
+input[type="text"], textarea {
+  width: 100%; background: #0f172a; border: 1px solid #334155;
+  border-radius: 8px; color: #e2e8f0; padding: 0.65rem 0.85rem;
+  font-size: 0.875rem; font-family: inherit; outline: none; transition: border-color 0.2s;
+}
+input[type="text"]:focus, textarea:focus { border-color: #38bdf8; }
+textarea { resize: vertical; min-height: 80px; }
+
+.priority-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.pbtn {
+  padding: 0.55rem; border: 2px solid #334155; border-radius: 8px;
+  background: transparent; color: #94a3b8; cursor: pointer;
+  font-size: 0.8rem; font-weight: 600; transition: all 0.2s;
+}
+.pbtn.sel.low      { border-color:#34d399; color:#34d399; background:rgba(52,211,153,0.1); }
+.pbtn.sel.medium   { border-color:#38bdf8; color:#38bdf8; background:rgba(56,189,248,0.1); }
+.pbtn.sel.high     { border-color:#fbbf24; color:#fbbf24; background:rgba(251,191,36,0.1);  }
+.pbtn.sel.critical { border-color:#f87171; color:#f87171; background:rgba(248,113,113,0.1); }
+
+.btn-add {
+  width: 100%; padding: 0.75rem; background: #38bdf8; color: #0f172a;
+  border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 700;
+  cursor: pointer; transition: background 0.2s; margin-top: 0.5rem;
+}
+.btn-add:hover { background: #7dd3fc; }
+.btn-add:active { transform: scale(0.98); }
+
+.demo-section { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #334155; }
+.btn-demo {
+  width: 100%; padding: 0.65rem; border: none; border-radius: 8px;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; margin-top: 0.5rem;
+}
+.btn-load  { background: rgba(251,191,36,0.15);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+.btn-load:hover  { background: rgba(251,191,36,0.3); }
+.btn-error { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+.btn-error:hover { background: rgba(248,113,113,0.3); }
+
+.tasks-panel { padding: 1.5rem; overflow-y: auto; }
+.tasks-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;
+}
+.filter-tabs { display: flex; gap: 0.4rem; }
+.ftab {
+  padding: 0.35rem 0.8rem; border-radius: 6px; font-size: 0.8rem;
+  font-weight: 500; cursor: pointer; border: 1px solid #334155;
+  background: transparent; color: #64748b; transition: all 0.2s;
+}
+.ftab.active { background: #334155; color: #e2e8f0; border-color: #475569; }
+
+.tasks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 1rem; }
+
+.task-card {
+  background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+  padding: 1rem; transition: transform 0.2s, box-shadow 0.2s; position: relative; overflow: hidden;
+}
+.task-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+.task-card.done { opacity: 0.5; }
+.pbar { position: absolute; top:0; left:0; width:4px; height:100%; border-radius:12px 0 0 12px; }
+.pbar-low      { background: #34d399; }
+.pbar-medium   { background: #38bdf8; }
+.pbar-high     { background: #fbbf24; }
+.pbar-critical { background: #f87171; }
+
+.task-top { display: flex; align-items: flex-start; justify-content: space-between; margin-left: 0.8rem; gap: 0.5rem; }
+.task-title { font-size: 0.9rem; font-weight: 600; color: #f1f5f9; line-height: 1.3; }
+.task-card.done .task-title { text-decoration: line-through; color: #64748b; }
+.pbadge {
+  font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem;
+  border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; flex-shrink: 0;
+}
+.pb-low      { background:rgba(52,211,153,0.15);  color:#34d399; }
+.pb-medium   { background:rgba(56,189,248,0.15);  color:#38bdf8; }
+.pb-high     { background:rgba(251,191,36,0.15);  color:#fbbf24; }
+.pb-critical { background:rgba(248,113,113,0.15); color:#f87171; }
+
+.task-desc { font-size: 0.8rem; color: #64748b; margin: 0.6rem 0 0 0.8rem; line-height: 1.4; }
+.task-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 0.75rem 0 0 0.8rem; padding-top: 0.75rem; border-top: 1px solid #334155;
+}
+.task-time { font-size: 0.7rem; color: #475569; }
+.task-btns { display: flex; gap: 0.4rem; }
+.btn-c, .btn-d {
+  padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem;
+  font-weight: 600; cursor: pointer; border: none; transition: all 0.2s;
+}
+.btn-c { background:rgba(52,211,153,0.15); color:#34d399; }
+.btn-c:hover { background:rgba(52,211,153,0.3); }
+.btn-c:disabled { opacity:0.35; cursor:not-allowed; }
+.btn-d { background:rgba(248,113,113,0.15); color:#f87171; }
+.btn-d:hover { background:rgba(248,113,113,0.3); }
+
+.empty {
+  grid-column:1/-1; text-align:center; padding:4rem 2rem; color:#334155;
+}
+.empty .eicon { font-size: 3rem; margin-bottom: 1rem; }
+
+.toast {
+  position: fixed; bottom: 1.5rem; right: 1.5rem;
+  background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+  padding: 0.75rem 1.25rem; font-size: 0.85rem; color: #34d399;
+  transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 999;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.err  { color: #f87171; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Task<span>Flow</span></div>
+  <div class="header-links">
+    <a class="hlink" href="/metrics" target="_blank">/ metrics</a>
+    <a class="hlink" href="/health"  target="_blank">/ health</a>
+    <a class="hlink" href="/api/stats" target="_blank">/ stats</a>
+  </div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat-card">
+    <div class="stat-icon ic-blue">&#9776;</div>
+    <div><div class="stat-value" id="s-total">0</div><div class="stat-label">Total Tasks</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon ic-yellow">&#9654;</div>
+    <div><div class="stat-value" id="s-pending">0</div><div class="stat-label">Pending</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon ic-green">&#10003;</div>
+    <div><div class="stat-value" id="s-completed">0</div><div class="stat-label">Completed</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon ic-red">&#9888;</div>
+    <div><div class="stat-value" id="s-critical">0</div><div class="stat-label">Critical Pending</div></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="add-panel">
+    <div class="panel-title">New Task</div>
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" id="t-title" placeholder="e.g. Deploy to production">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="t-desc" placeholder="What needs to be done..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Priority</label>
+      <div class="priority-grid">
+        <button class="pbtn low"      onclick="setPri('low')">Low</button>
+        <button class="pbtn medium sel" onclick="setPri('medium')">Medium</button>
+        <button class="pbtn high"     onclick="setPri('high')">High</button>
+        <button class="pbtn critical" onclick="setPri('critical')">Critical</button>
+      </div>
+    </div>
+    <button class="btn-add" onclick="addTask()">+ Add Task</button>
+
+    <div class="demo-section">
+      <div class="panel-title">Demo Controls</div>
+      <button class="btn-demo btn-load" onclick="simulateLoad()">
+        Simulate Load — 10 Tasks
+      </button>
+      <button class="btn-demo btn-error" onclick="simulateErrors()">
+        Simulate Errors — Trigger Alert
+      </button>
+    </div>
+  </div>
+
+  <div class="tasks-panel">
+    <div class="tasks-header">
+      <div class="panel-title" style="margin-bottom:0">Tasks</div>
+      <div class="filter-tabs">
+        <button class="ftab active" onclick="setFilter('all',this)">All</button>
+        <button class="ftab" onclick="setFilter('pending',this)">Pending</button>
+        <button class="ftab" onclick="setFilter('completed',this)">Completed</button>
+      </div>
+    </div>
+    <div class="tasks-grid" id="tasks-grid">
+      <div class="empty"><div class="eicon">&#9744;</div><p>No tasks yet.</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let selPri = 'medium', filter = 'all', allTasks = [];
+
+function setPri(p) {
+  selPri = p;
+  document.querySelectorAll('.pbtn').forEach(b => b.classList.remove('sel'));
+  document.querySelector('.pbtn.' + p).classList.add('sel');
+}
+function setFilter(f, el) {
+  filter = f;
+  document.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+function toast(msg, err) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (err ? ' err' : '');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function load() {
+  const [tr, sr] = await Promise.all([fetch('/api/tasks'), fetch('/api/stats')]);
+  allTasks = await tr.json();
+  const s  = await sr.json();
+  document.getElementById('s-total').textContent    = s.total;
+  document.getElementById('s-pending').textContent  = s.pending;
+  document.getElementById('s-completed').textContent= s.completed;
+  document.getElementById('s-critical').textContent = s.by_priority.critical || 0;
+  render();
+}
+
+function render() {
+  const grid = document.getElementById('tasks-grid');
+  let list = allTasks;
+  if (filter === 'pending')   list = allTasks.filter(t => !t.completed);
+  if (filter === 'completed') list = allTasks.filter(t =>  t.completed);
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty"><div class="eicon">&#9744;</div><p>No tasks here.</p></div>';
+    return;
+  }
+  const ord = {critical:0, high:1, medium:2, low:3};
+  list.sort((a,b) => a.completed !== b.completed ? (a.completed?1:-1) : (ord[a.priority]||2)-(ord[b.priority]||2));
+  grid.innerHTML = list.map(t => `
+    <div class="task-card ${t.completed?'done':''}">
+      <div class="pbar pbar-${t.priority}"></div>
+      <div class="task-top">
+        <div class="task-title">${esc(t.title)}</div>
+        <span class="pbadge pb-${t.priority}">${t.priority}</span>
+      </div>
+      ${t.description ? `<div class="task-desc">${esc(t.description)}</div>` : ''}
+      <div class="task-footer">
+        <span class="task-time">${t.created_at}</span>
+        <div class="task-btns">
+          <button class="btn-c" onclick="completeTask('${t.id}')" ${t.completed?'disabled':''}>
+            ${t.completed ? 'Done' : 'Complete'}
+          </button>
+          <button class="btn-d" onclick="deleteTask('${t.id}')">Delete</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function addTask() {
+  const title = document.getElementById('t-title').value.trim();
+  if (!title) { toast('Please enter a task title', true); return; }
+  await fetch('/api/tasks', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ title, description: document.getElementById('t-desc').value.trim(), priority: selPri })
+  });
+  document.getElementById('t-title').value = '';
+  document.getElementById('t-desc').value  = '';
+  toast('Task added');
+  load();
+}
+
+async function completeTask(id) {
+  await fetch(`/api/tasks/${id}/complete`, { method: 'PUT' });
+  toast('Task completed');
+  load();
+}
+
+async function deleteTask(id) {
+  await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+  toast('Task deleted');
+  load();
+}
+
+async function simulateLoad() {
+  const res = await fetch('/api/simulate/load', { method: 'POST' });
+  const d   = await res.json();
+  toast(`${d.tasks_created} tasks created — check Prometheus in 1 min`);
+  load();
+}
+
+async function simulateErrors() {
+  await fetch('/api/simulate/errors', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({count: 20})
+  });
+  toast('20 errors injected — HighHTTPErrorRate alert in ~1 min', true);
+}
+
+setInterval(load, 20000);
+load();
+</script>
+</body>
+</html>

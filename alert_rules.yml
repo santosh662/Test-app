@@ -1,0 +1,70 @@
+groups:
+
+  - name: taskmanager_alerts
+    rules:
+
+      - alert: TooManyPendingTasks
+        expr: active_tasks_current > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Too many pending tasks"
+          description: "{{ $value }} tasks are pending. Please take action."
+
+      - alert: CriticalTaskPending
+        expr: tasks_created_total{priority="critical"} - ignoring(priority) tasks_completed_total{priority="critical"} > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical priority task is pending"
+          description: "A critical task has been unresolved for more than 2 minutes."
+
+      - alert: HighHTTPErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP error rate"
+          description: "Error rate is {{ $value | printf \"%.2f\" }} req/s over the last 5 minutes."
+
+      - alert: TaskManagerDown
+        expr: up{job="taskmanager"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "TaskManager application is down"
+          description: "Prometheus cannot scrape the TaskManager app."
+
+  - name: infrastructure_alerts
+    rules:
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU is at {{ $value | printf \"%.1f\" }}% for more than 2 minutes."
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | printf \"%.1f\" }}%."
+
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 20
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Only {{ $value | printf \"%.1f\" }}% disk space remaining on /."
